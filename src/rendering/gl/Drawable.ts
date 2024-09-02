@@ -1,4 +1,4 @@
-import {gl} from '../../globals';
+import { gl } from '../../globals';
 
 abstract class Drawable {
   count: number = 0;
@@ -11,7 +11,7 @@ abstract class Drawable {
   posBound: boolean = false;
   norBound: boolean = false;
 
-  abstract create() : void;
+  abstract create(): void;
 
   destory() {
     gl.deleteBuffer(this.bufIdx);
@@ -43,6 +43,7 @@ abstract class Drawable {
 
   bindPos(): boolean {
     if (this.posBound) {
+      console.log(`Bound buffer to position`);
       gl.bindBuffer(gl.ARRAY_BUFFER, this.bufPos);
     }
     return this.posBound;
