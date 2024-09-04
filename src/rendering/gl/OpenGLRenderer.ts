@@ -22,7 +22,7 @@ class OpenGLRenderer {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   }
 
-  render(camera: Camera, prog: ShaderProgram, drawables: Array<Drawable>, inputColor: Array<number> = [1, 0, 0, 1], freq: number) {
+  render(camera: Camera, prog: ShaderProgram, drawables: Array<Drawable>, inputColor: Array<number> = [1, 0, 0, 1], freq: number, noiseOption: number = 0) {
     let model = mat4.create();
     let viewProj = mat4.create();
     let color = vec4.fromValues(inputColor[0], inputColor[1], inputColor[2], inputColor[3]);
@@ -33,6 +33,8 @@ class OpenGLRenderer {
     prog.setViewProjMatrix(viewProj);
     prog.setGeometryColor(color);
     gl.uniform1f(gl.getUniformLocation(prog.prog, "u_Frequency"), freq);
+    gl.uniform1i(gl.getUniformLocation(prog.prog, "u_Noise"), noiseOption);
+    gl.uniform1f(gl.getUniformLocation(prog.prog, "u_Time"), performance.now() / 1000);
 
     for (let drawable of drawables) {
       prog.draw(drawable);

@@ -15,6 +15,10 @@ uniform vec4 u_Color; // The color with which to render this instance of geometr
 
 uniform float u_Frequency;
 // These are the interpolated values out of the rasterizer, so you can't know
+
+uniform int u_Noise;
+uniform float u_Time; // in seconds
+
 // their specific values without knowing the vertices that contributed to them
 in vec4 fs_Nor;
 in vec4 fs_LightVec;
@@ -39,37 +43,58 @@ float hash13(vec3 p)
     return fract((p3.x + p3.y) * p3.z);
 }
 
-vec2 GetGradient(vec2 intPos, float t) {
-    
-    // Uncomment for calculated rand
-    //float rand = fract(sin(dot(intPos, vec2(12.9898, 78.233))) * 43758.5453);;
-    
-    // Texture-based rand (a bit faster on my GPU)
-    float rand = hash12(intPos / 64.f);
-    
-    // Rotate gradient: random starting rotation, random rotation rate
-    float angle = 6.283185 * rand + 4.0 * t * rand;
-    return vec2(cos(angle), sin(angle));
+vec3 rand(vec3 p){
+ 	const vec3 k = vec3( 3.1415926, 2.71828,6.62607015);
+ 	p = p*k + p.yzx;
+ 	return -1.0 + 2.0*fract( 2.0 * k * fract( p.x*p.y*(p.x+p.y)) );
 }
 
-
-float perlin3D(vec3 pos) {
-    vec2 i = floor(pos.xy);
-    vec2 f = pos.xy - i;
-    vec2 blend = f * f * (3.0 - 2.0 * f);
-    float noiseVal = 
-        mix(
-            mix(
-                dot(GetGradient(i + vec2(0, 0), pos.z), f - vec2(0, 0)),
-                dot(GetGradient(i + vec2(1, 0), pos.z), f - vec2(1, 0)),
-                blend.x),
-            mix(
-                dot(GetGradient(i + vec2(0, 1), pos.z), f - vec2(0, 1)),
-                dot(GetGradient(i + vec2(1, 1), pos.z), f - vec2(1, 1)),
-                blend.x),
-        blend.y
-    );
-    return noiseVal / 0.7; // normalize to about [-1..1]
+float perlin3D(vec3 p){
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    vec3 u = f*f*f*(f*(f*6.0-15.0)+10.0);
+    
+    //random gradiant
+    vec3 g1 = rand(i+vec3(0.0,0.0,0.0));
+    vec3 g2 = rand(i+vec3(1.0,0.0,0.0));
+    vec3 g3 = rand(i+vec3(0.0,1.0,0.0));
+    vec3 g4 = rand(i+vec3(1.0,1.0,0.0));
+    vec3 g5 = rand(i+vec3(0.0,0.0,1.0));
+    vec3 g6 = rand(i+vec3(1.0,0.0,1.0));
+    vec3 g7 = rand(i+vec3(0.0,1.0,1.0));
+    vec3 g8 = rand(i+vec3(1.0,1.0,1.0));
+    
+    //direction vector
+    vec3 d1 = f - vec3(0.0,0.0,0.0);
+    vec3 d2 = f - vec3(1.0,0.0,0.0);
+    vec3 d3 = f - vec3(0.0,1.0,0.0);
+    vec3 d4 = f - vec3(1.0,1.0,0.0);
+    vec3 d5 = f - vec3(0.0,0.0,1.0);
+    vec3 d6 = f - vec3(1.0,0.0,1.0);
+    vec3 d7 = f - vec3(0.0,1.0,1.0);
+    vec3 d8 = f - vec3(1.0,1.0,1.0);
+    
+    //weight
+    float n1 = dot(g1, d1);
+    float n2 = dot(g2, d2);
+    float n3 = dot(g3, d3);
+    float n4 = dot(g4, d4);
+    float n5 = dot(g5, d5);
+    float n6 = dot(g6, d6);
+    float n7 = dot(g7, d7);
+    float n8 = dot(g8, d8);
+    
+    //trilinear interpolation
+    float a = mix(n1,n2,u.x);
+    float b = mix(n3,n4,u.x);
+    float c1 = mix(a,b,u.y);
+    a = mix(n5,n6,u.x);
+    b = mix(n7,n8,u.x);
+    float c2 = mix(a,b,u.y);
+    float c = mix(c1,c2,u.z);
+    
+    
+    return c;
 }
 
 // 3d fbm function
@@ -144,10 +169,15 @@ float worley3D(vec3 pos) {
     return 1.0 - min_dist;
 }
 
+
 void main()
 {
-        vec3 world = fs_world;
-    // Material base color (before shading)
+        
+        
+        // out_Col = vec4(world, 1.0);
+        // return;
+        
+        // Material base color (before shading)
         vec4 diffuseColor = u_Color;
 
         // Calculate the diffuse term for half-Lambert shading
@@ -164,8 +194,20 @@ void main()
                                                             //lit by our point light are not completely black.
         // Compute final shaded color
         // out_Col = vec4(diffuseColor.rgb * lightIntensity, diffuseColor.a);
-        float perlin = perlin3D(fs_world * u_Frequency);
-        float fbm = fbm3D(fs_world * u_Frequency);
-        float worley = worley3D(fs_world * u_Frequency);
-        out_Col = vec4(vec3(worley), 1.0);
+
+        vec3 world = fs_world + vec3(u_Time * 0.2f);
+
+        float noise = 0.0;
+        if (u_Noise == 1) {
+            noise = perlin3D(world * u_Frequency);
+        } else if (u_Noise == 2) {
+            noise = fbm3D(world * u_Frequency);
+            noise = fbm3D((world + noise) * u_Frequency);
+            noise = fbm3D((world + noise) * u_Frequency);
+        } else if (u_Noise == 3) {
+            noise = worley3D(world * u_Frequency);
+        }
+
+        // return output color
+        out_Col = u_Noise == 0 ? vec4(diffuseColor.rgb * lightIntensity, diffuseColor.a) : vec4(noise);
 }

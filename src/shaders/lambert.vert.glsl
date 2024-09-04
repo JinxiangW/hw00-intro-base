@@ -18,6 +18,7 @@ uniform mat4 u_ModelInvTr;  // The inverse transpose of the model matrix.
 uniform mat4 u_ViewProj;    // The matrix that defines the camera's transformation.
                             // We've written a static matrix for you to use for HW2,
                             // but in HW3 you'll have to generate one yourself
+uniform float u_Time; // In seconds
 
 in vec4 vs_Pos;             // The array of vertex positions passed to the shader
 
@@ -47,7 +48,13 @@ void main()
 
 
     vec4 modelposition = u_Model * vs_Pos;   // Temporarily store the transformed vertex positions for use below
-    
+    if (modelposition.y > 0.0f)
+    {
+        modelposition.y += 0.1 * sin(modelposition.x + u_Time * 2.f) + 0.1 * sin(modelposition.z + u_Time * 2.f); // Add a sine wave to the y position of the model
+    }
+    modelposition.y += 0.05 * sin(u_Time * 2.f); // Add a sine wave to the y position of the model
+
+
     fs_world = vec3(modelposition); // Pass the world position of the vertex to the fragment shader
     
     fs_LightVec = lightPos - modelposition;  // Compute the direction in which the light source lies

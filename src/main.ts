@@ -15,11 +15,11 @@ const controls = {
   tesselations: 5,
   color: [255, 0, 0],
   freq: 5.0,
-  noiseOptions: {
-
-  },
+  noiseSelection: 'No Noise',
   'Load Scene': loadScene, // A function pointer, essentially
 };
+
+const noiseOptions = ['No Noise', 'Perlin', 'FBM', 'Worley'];
 
 let icosphere: Icosphere;
 let square: Square;
@@ -43,14 +43,14 @@ function main() {
   stats.domElement.style.left = '0px';
   stats.domElement.style.top = '0px';
   document.body.appendChild(stats.domElement);
-
+  let noiseOp = 0;
   // Add controls to the gui
   const gui = new DAT.GUI();
   gui.add(controls, 'tesselations', 0, 8, 1);
   gui.addColor(controls, 'color');
   gui.add(controls, 'freq', 0, 10, 0.1);
+  gui.add(controls, 'noiseSelection', noiseOptions);
   gui.add(controls, 'Load Scene');
-
   // get canvas and webgl context
   const canvas = <HTMLCanvasElement>document.getElementById('canvas');
   const gl = <WebGL2RenderingContext>canvas.getContext('webgl2');
@@ -87,11 +87,27 @@ function main() {
       icosphere.create();
     }
     let color = Array<number>(controls.color[0] / 255, controls.color[1] / 255, controls.color[2] / 255, 1);
+
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+    gl.enable(gl.CULL_FACE);
+    // pass 1 draw back face
+    gl.cullFace(gl.FRONT)
     renderer.render(camera, lambert, [
       // icosphere,
       // square,
       cube,
-    ], color, controls.freq);
+    ], color, controls.freq, noiseOptions.indexOf(controls.noiseSelection));
+
+    //pass 2 draw front face
+    gl.cullFace(gl.BACK)
+    renderer.render(camera, lambert, [
+      // icosphere,
+      // square,
+      cube,
+    ], color, controls.freq, noiseOptions.indexOf(controls.noiseSelection));
+
     stats.end();
 
     // Tell the browser to call `tick` again whenever it renders a new frame
