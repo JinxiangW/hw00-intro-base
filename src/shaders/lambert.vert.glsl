@@ -34,7 +34,15 @@ out vec3 fs_world;         // The world position of each vertex. This is implici
 
 const vec4 lightPos = vec4(5, 5, 3, 1); //The position of our virtual light, which is used to compute the shading of
                                         //the geometry in the fragment shader.
+const mat4 r45x = mat4(1.0000000,  0.0000000,  0.0000000, 0,
+                        0.0000000,  0.7071068, -0.7071068, 0, 
+                        0.0000000,  0.7071068,  0.7071068, 0,
+                        0, 0, 0, 1);
 
+const mat4 r45z = mat4(0.7071068, -0.7071068, 0.0000000, 0,
+                        0.7071068,  0.7071068, 0.0000000, 0,
+                        0.0000000,  0.0000000, 1.0000000, 0,
+                        0, 0, 0, 1);
 void main()
 {
     fs_Col = vs_Col;                         // Pass the vertex colors to the fragment shader for interpolation
@@ -46,14 +54,17 @@ void main()
                                                             // perpendicular to the surface after the surface is transformed by
                                                             // the model matrix.
 
-
-    vec4 modelposition = u_Model * vs_Pos;   // Temporarily store the transformed vertex positions for use below
-    if (modelposition.y > 0.0f)
-    {
-        modelposition.y += 0.1 * sin(modelposition.x + u_Time * 2.f) + 0.1 * sin(modelposition.z + u_Time * 2.f); // Add a sine wave to the y position of the model
-    }
-    modelposition.y += 0.05 * sin(u_Time * 2.f); // Add a sine wave to the y position of the model
-
+    mat4 rtimey = mat4(cos(u_Time * 0.5), 0.0 , -sin(u_Time * 0.5), 0.0,
+                      0.0, 1.0, 0.0, 0.0,
+                      sin(u_Time * 0.5), 0 , cos(u_Time * 0.5), 0.0,
+                      0.0, 0.0, 0.0, 1.0);
+    mat4 rtimez = mat4(cos(u_Time * 0.5), sin(u_Time * 0.5), 0.0, 0.0,
+                      -sin(u_Time * 0.5), cos(u_Time * 0.5), 0.0, 0.0,
+                      0.0, 0.0, 1.0, 0.0,
+                      0.0, 0.0, 0.0, 1.0);
+    vec4 modelposition =  rtimez * r45x * u_Model * vs_Pos * r45z * rtimey;   // Temporarily store the transformed vertex positions for use below
+    float shrink = sin(u_Time * 2.) - 1.0f;
+    modelposition.xyz += 0.1 * shrink * (modelposition.xyz); // Add a sine wave to the x, y, and z positions of the model
 
     fs_world = vec3(modelposition); // Pass the world position of the vertex to the fragment shader
     

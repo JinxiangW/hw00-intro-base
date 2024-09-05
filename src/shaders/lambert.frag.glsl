@@ -18,6 +18,7 @@ uniform float u_Frequency;
 
 uniform int u_Noise;
 uniform float u_Time; // in seconds
+uniform vec3 u_Camera;
 
 // their specific values without knowing the vertices that contributed to them
 in vec4 fs_Nor;
@@ -166,13 +167,31 @@ float worley3D(vec3 pos) {
             }
         }
     }
+
     return 1.0 - min_dist;
 }
 
+float sdOctahedron( vec3 p, float s)
+{
+  p = abs(p);
+  return (p.x+p.y+p.z-s)*0.57735027;
+}
 
+vec3 calcNormal( in vec3 p ) 
+{
+    const float eps = 0.0001;
+    const vec2 h = vec2(eps,0);
+    return normalize( vec3(sdOctahedron(p+h.xyy, 0.4) - sdOctahedron(p-h.xyy, 0.4),
+                           sdOctahedron(p+h.yxy, 0.4) - sdOctahedron(p-h.yxy, 0.4),
+                           sdOctahedron(p+h.yyx, 0.4) - sdOctahedron(p-h.yyx, 0.4) ));
+}
+
+const mat4 r15x = mat4(1.0000000,  0.0000000,  0.0000000, 0,
+                        0.0000000,  0.2588190, -0.9659258, 0, 
+                        0.0000000,  0.9659258,  0.2588190, 0,
+                        0, 0, 0, 1);
 void main()
 {
-        
         
         // out_Col = vec4(world, 1.0);
         // return;
@@ -194,20 +213,57 @@ void main()
                                                             //lit by our point light are not completely black.
         // Compute final shaded color
         // out_Col = vec4(diffuseColor.rgb * lightIntensity, diffuseColor.a);
+        
 
-        vec3 world = fs_world + vec3(u_Time * 0.2f);
+        vec3 world = fs_world; 
+        vec4 octColor = vec4(0);
+
+        // create a rotating octahedron
+        if (u_Noise != 0)
+        {
+            // raymarch sdf
+            float t = 0.0;
+            float tmax = 20.0;
+            vec3 rd = normalize(world - u_Camera);
+            for (int i = 0; i < 64 && t < tmax; i++)
+            {
+                vec3 p = u_Camera + t * rd;
+
+                // rotate the octahedron with time
+                float time = u_Time * 0.5;
+                mat3 rtimey = mat3(cos(time * 1.5), 0.0 , -sin(time * 1.5),
+                                      0.0, 1.0, 0.0,
+                                      sin(time * 1.5), 0 , cos(time * 1.5));
+                mat3 rtimez = mat3(cos(time), -sin(time), 0.0,
+                                      sin(time), cos(time), 0.0,
+                                      0.0, 0.0, 1.0);
+
+                vec3 rp = p * rtimey * rtimez;
+
+                float d = sdOctahedron(rp, 0.56);
+                if (d < 0.001)
+                {
+                    octColor = vec4(u_Color.xyz, fbm3D(p * u_Frequency));
+                    float kd = dot(normalize(calcNormal(rp)), normalize(fs_LightVec.xyz)) * 0.5 + 0.5;
+                    octColor *= kd + ambientTerm;
+                    break;
+                }
+                t += d;
+            }
+        }
 
         float noise = 0.0;
         if (u_Noise == 1) {
             noise = perlin3D(world * u_Frequency);
         } else if (u_Noise == 2) {
-            noise = fbm3D(world * u_Frequency);
-            noise = fbm3D((world + noise) * u_Frequency);
-            noise = fbm3D((world + noise) * u_Frequency);
+            noise = fbm3D(world * u_Frequency * 0.5);
+            noise = fbm3D((world + noise) * u_Frequency * 0.5);
+            noise = fbm3D((world + noise) * u_Frequency * 0.5);
         } else if (u_Noise == 3) {
-            noise = worley3D(world * u_Frequency);
+            noise = worley3D(world * u_Frequency * 0.6);
         }
 
         // return output color
-        out_Col = u_Noise == 0 ? vec4(diffuseColor.rgb * lightIntensity, diffuseColor.a) : vec4(noise);
+        out_Col = u_Noise == 0 ? vec4(diffuseColor.rgb  * lightIntensity, diffuseColor.a) : vec4(u_Color.xyz * lightIntensity, noise);
+        out_Col = mix(out_Col, octColor, octColor.a);
 }

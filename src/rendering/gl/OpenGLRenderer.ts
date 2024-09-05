@@ -35,7 +35,7 @@ class OpenGLRenderer {
     gl.uniform1f(gl.getUniformLocation(prog.prog, "u_Frequency"), freq);
     gl.uniform1i(gl.getUniformLocation(prog.prog, "u_Noise"), noiseOption);
     gl.uniform1f(gl.getUniformLocation(prog.prog, "u_Time"), performance.now() / 1000);
-
+    gl.uniform3fv(gl.getUniformLocation(prog.prog, "u_Camera"), camera.controls.eye);
     for (let drawable of drawables) {
       prog.draw(drawable);
     }
