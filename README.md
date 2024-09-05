@@ -1,3 +1,24 @@
+[Live Demo Here](https://jinxiangw.github.io/hw00-intro-base/)
+-------
+![](./screenshots/hw0.gif)
+### Features:
+
+1. GUI: allowing selections for color, noise frequency, and noise type 
+2. Main.ts: use 2-pass rendering to draw back and front side of the transparent geometry respectively
+3. Vertex Shader: 
+    1. rotate vertecies in a certain speed
+    2. scale the geometry using sin wave
+4. Fragment Shader:
+    1. implement perlin, fbm, and worley noise
+    2. create a rotating octahedron inside geometry using sdf, calculate its normal and shade accordingly.
+    3. alpha blend 
+    4. change lambert shading to half-lambert
+
+References:
+
+1. Adam’s procedual noise slides
+2. Distance function - Inigo Quilez: [https://iquilezles.org/articles/distfunctions/](https://iquilezles.org/articles/distfunctions/)
+
 # HW 0: Intro to Javascript and WebGL
 
 <p align="center">
