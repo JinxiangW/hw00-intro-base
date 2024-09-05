@@ -15,7 +15,7 @@ const controls = {
   tesselations: 5,
   color: [24, 24, 130],
   freq: 3.2,
-  noiseSelection: 'No Noise',
+  noiseSelection: 'Perlin',
   'Load Scene': loadScene, // A function pointer, essentially
 };
 
